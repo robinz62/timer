@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Countdown Timer</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+	    //font-size: 48px;
+        }
+
+        #timer {
+            color: black; /* Default color for positive time */
+            font-size: 48px; /* Default font size */
+        }
+
+        .negative {
+            color: red; /* Red color for negative time */
+        }
+
+        #timer.fullscreen {
+            font-size: 192px; /* Larger font size for full-screen mode */
+        }
+
+
+
+        #startStopButton {
+            font-size: 12px;
+            background-color: transparent;
+            border: auto;
+            color: black;
+	    opacity: 1.0; 
+            padding: 5px 10px;
+	    border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #toggleSoundButton {
+            font-size: 12px;
+            background-color: transparent;
+            border: auto;
+            color: black;
+	    opacity: 1.0; 
+            padding: 5px 10px;
+	    border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #toggleSoundButton.off {
+            font-size: 12px;
+
+	    background-color: #ccc; /* Set a light gray background color */
+	    color: #666; /* Set a slightly darker text color */
+            opacity: 0.4; /* Set the opacity to 60% to make it appear dimmed */
+            /* Additional styles for padding, border, etc. */
+            /padding: 5px 10px;
+            border: auto;
+            border-radius: 5px;
+        }
+
+        //#toggleSoundButton:hover {
+        //    background-color: lightgrey;
+        //}
+
+        #toggleFullscreenButton {
+            font-size: 12px;
+            background-color: transparent;
+            border: auto;
+            color: black;
+	    opacity: 1.0; 
+            padding: 5px 10px;
+	    border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+
+
+    </style>
+</head>
+<body>
+    <div>
+        <!--
+	<h1>Countdown Timer</h1>
+	-->
+        <p id="timer">00:00:03</p>
+
+        <label for="duration">Set time in seconds:</label>
+        <input type="number" id="duration" value="3">
+
+        <button id="startStopButton" onclick="toggleStartStop()">Start</button>
+        <button id="toggleSoundButton" class="${isSoundOn ? 'off' : ''}" onclick="toggleSound()">Alarm</button>
+        <button id="toggleFullscreenButton" class="${isFullScreenOn ? 'off':''}" onclick="toggleFullscreen()">FullScreen</button>
+    </div>
+
+    <script defer>
+        let timerInterval;
+        let currentTime;
+        let beepingTime = -10; // Beeping time in seconds (from 0 to -10)
+        let audioCtx;
+        let oscillator;
+        let isSoundOn = true; // Beeping sound is on by default
+        let isSoundTriggered = false; // Track if the sound has been triggered by set time expiration
+        let isRunning = false;
+        let isFullScreenOn=false;
+
+        function formatTime(timeInSeconds) {
+            const hours = Math.floor(Math.abs(timeInSeconds) / 3600);
+            const minutes = Math.floor((Math.abs(timeInSeconds) % 3600) / 60);
+            const seconds = Math.abs(timeInSeconds) % 60;
+            const sign = (timeInSeconds < 0) ? '-' : '';
+            return `${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            const durationInSeconds = parseInt(document.getElementById("duration").value, 10);
+            if (isNaN(durationInSeconds) || durationInSeconds <= 0) {
+                alert("Please enter a valid positive number for the duration.");
+                return;
+            }
+
+            currentTime = durationInSeconds;
+            document.getElementById("timer").innerText = formatTime(currentTime);
+
+            clearInterval(timerInterval); // Clear any existing interval before starting new one
+            isSoundTriggered = false; // Reset isSoundTriggered to false
+
+            timerInterval = setInterval(function () {
+                currentTime--;
+
+                document.getElementById("timer").innerText = formatTime(currentTime);
+
+                if (currentTime === -1) {
+                    clearInterval(timerInterval);
+                    currentTime = -1; // Reset currentTime to -1
+                    document.getElementById("timer").style.color = "red"; // Apply red color for negative time
+
+                    // Play the beeping sound if sound is turned on
+                    if (isSoundOn && !isSoundTriggered) {
+                        playBeepSound();
+                        isSoundTriggered = true;
+                        updateToggleSoundButtonLabel();
+                    }
+
+                    // Continue the negative countdown indefinitely
+                    timerInterval = setInterval(function () {
+                        currentTime--;
+                        document.getElementById("timer").innerText = formatTime(currentTime);
+                        //if (currentTime === beepingTime && isSoundOn && isSoundTriggered) {
+                         //   playBeepSound();
+                        //}
+                    }, 1000);
+                } //else if (currentTime < beepingTime) {
+                    //currentTime = durationInSeconds - 1;
+                //}
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            document.getElementById("timer").style.color = "black"; // Reset color back to black on stop
+            isSoundTriggered = false;
+            if (oscillator) {
+                oscillator.stop();
+                oscillator = null;
+            }
+        }
+
+        function toggleFullscreen() {
+            const toggleFullscreenButton = document.getElementById("toggleFullscreenButton");
+
+            if (document.fullscreenElement) {
+		document.exitFullscreen();
+		toggleFullscreenButton.innerText="FullScreen";
+            } else {
+		document.documentElement.requestFullscreen();
+		toggleFullscreenButton.innerText="Exit FullScreen";
+            }
+        }
+
+
+
+
+        function toggleStartStop() {
+            if (isRunning) {
+                stopTimer();
+                isSoundTriggered = false; // Reset sound trigger status when stopping timer
+            } else {
+                startTimer();
+            }
+            isRunning = !isRunning;
+            const startStopButton = document.getElementById("startStopButton");
+            startStopButton.innerText = isRunning ? 'Stop' : 'Start';
+            updateToggleSoundButtonLabel();
+        }
+
+        function toggleSound() {
+            isSoundOn = !isSoundOn;
+            updateToggleSoundButtonLabel();
+            if (isSoundOn && isSoundTriggered) {
+                playBeepSound();
+            } else if (!isSoundOn && oscillator) {
+                oscillator.stop();
+                oscillator = null;
+            }
+        }
+
+        function updateToggleSoundButtonLabel() {
+            const toggleSoundButton = document.getElementById("toggleSoundButton");
+            //toggleSoundButton.innerText = isSoundOn ? 'Turn Sound Off' : 'Turn Sound On';
+            toggleSoundButton.classList.toggle('off', !isSoundOn);
+        }
+
+
+
+        function playBeepSound() {
+            if (audioCtx) {
+                audioCtx.close();
+            }
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            oscillator = audioCtx.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+            oscillator.connect(audioCtx.destination);
+            oscillator.start();
+        }
+
+        // Event listener to handle fullscreen mode changes
+        document.addEventListener("fullscreenchange", function () {
+            const timerElement = document.getElementById("timer");
+            if (document.fullscreenElement) {
+                timerElement.classList.add("fullscreen"); // Apply fullscreen style
+            } else {
+                timerElement.classList.remove("fullscreen"); // Remove fullscreen style
+            }
+        });
+
+    </script>
+</body>
+</html>
