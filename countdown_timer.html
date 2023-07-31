@@ -89,7 +89,7 @@
 
 <body>
     <div>
-        <input type="text" id="duration" value="3">
+        <input type="text" id="duration" value="00:05:00">
 
         <br />
 
@@ -127,6 +127,7 @@
 
         function formatInputTime(text) {
             text = removeNonNumericCharacters(text);
+            text = '0000000' + text;
             if (text.length > 6) {
                 text = text.substring(text.length - 6);
             }
