@@ -13,17 +13,25 @@
             font-size: 48px;
         }
 
-        #timer {
+        #duration {
             color: black;
             font-size: 48px;
+            border: none;
+            width: 256px;
+            text-align: center;
         }
 
         .negative {
             color: red;
         }
 
-        #timer.fullscreen {
+        #duration.fullscreen {
             font-size: 192px;
+            width: 800px;
+        }
+
+        .buttons {
+            text-align: center;
         }
 
         #startStopButton {
@@ -81,14 +89,16 @@
 
 <body>
     <div>
-        <p id="timer">00:00:03</p>
+        <input type="text" id="duration" value="3">
 
-        <input type="number" id="duration" value="3">
+        <br />
 
-        <button id="startStopButton" onclick="toggleStartStop()">Start</button>
-        <button id="toggleSoundButton" class="${isSoundOn ? 'off' : ''}" onclick="toggleSound()">Alarm</button>
-        <button id="toggleFullscreenButton" class="${isFullScreenOn ? 'off':''}"
-            onclick="toggleFullscreen()">FullScreen</button>
+        <div class="buttons">
+            <button id="startStopButton" onclick="toggleStartStop()">Start</button>
+            <button id="toggleSoundButton" class="${isSoundOn ? 'off' : ''}" onclick="toggleSound()">Alarm</button>
+            <button id="toggleFullscreenButton" class="${isFullScreenOn ? 'off':''}"
+                onclick="toggleFullscreen()">FullScreen</button>
+        </div>
     </div>
 
     <script defer>
@@ -103,7 +113,6 @@
         let isFullScreenOn = false;
 
         function formatTime(timeInSeconds) {
-            console.log(timeInSeconds);
             const hours = Math.floor(Math.abs(timeInSeconds) / 3600);
             const minutes = Math.floor((Math.abs(timeInSeconds) % 3600) / 60);
             const seconds = Math.abs(timeInSeconds) % 60;
@@ -111,28 +120,66 @@
             return `${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
 
+        function removeNonNumericCharacters(text) {
+            const nonNumericCharactersRegex = /[^0-9]/g;
+            return text.replace(nonNumericCharactersRegex, "");
+        }
+
+        function formatInputTime(text) {
+            text = removeNonNumericCharacters(text);
+            if (text.length > 6) {
+                text = text.substring(text.length - 6);
+            }
+            if (text.length >= 3) {
+                const length = text.length;
+                text = text.substring(0, text.length - 2) + ':' + text.substring(text.length - 2);
+            }
+            if (text.length >= 6) {
+                const length = text.length;
+                text = text.substring(0, text.length - 5) + ':' + text.substring(text.length - 5);
+            }
+            return text;
+        }
+
+        document.querySelector("#duration").addEventListener("input", function () {
+            document.getElementById("duration").value = formatInputTime(document.getElementById("duration").value);
+        })
+
+        function parseTime(text) {
+            text = text.replaceAll(':', '');
+            text = '00000000000' + text;  // this is an ugly hack don't do this with real code
+            const length = text.length;
+            let seconds = parseInt(text.substring(length - 2, length));
+            let minutes = parseInt(text.substring(length - 4, length - 2));
+            let hours = parseInt(text.substring(0, length - 4));
+
+            console.log(hours + " " + minutes + " " + seconds);
+            return 60 * 60 * hours + 60 * minutes + seconds;
+        }
+
         function startTimer() {
-            const durationInSeconds = parseInt(document.getElementById("duration").value, 10);
+            const durationInSeconds = parseTime(document.getElementById("duration").value);
             if (isNaN(durationInSeconds) || durationInSeconds <= 0) {
                 alert("Please enter a valid positive number for the duration.");
                 return;
             }
 
             currentTime = durationInSeconds;
-            document.getElementById("timer").innerText = formatTime(currentTime);
+            document.getElementById("duration").value = formatTime(currentTime);
 
             clearInterval(timerInterval); // Clear any existing interval before starting new one
             isSoundTriggered = false; // Reset isSoundTriggered to false
 
             timerInterval = setInterval(function () {
+                console.log('currentTime is ' + currentTime);
                 currentTime--;
 
-                document.getElementById("timer").innerText = formatTime(currentTime);
+                document.getElementById("duration").value = formatTime(currentTime);
 
                 if (currentTime === -1) {
                     clearInterval(timerInterval);
                     currentTime = -1; // Reset currentTime to -1
-                    document.getElementById("timer").style.color = "red"; // Apply red color for negative time
+                    document.getElementById("duration").style.color = "red"; // Apply red color for negative time
 
                     // Play the beeping sound if sound is turned on
                     if (isSoundOn && !isSoundTriggered) {
@@ -144,7 +191,7 @@
                     // Continue the negative countdown indefinitely
                     timerInterval = setInterval(function () {
                         currentTime--;
-                        document.getElementById("timer").innerText = formatTime(currentTime);
+                        document.getElementById("duration").value = formatTime(currentTime);
                     }, 1000);
                 }
             }, 1000);
@@ -152,7 +199,7 @@
 
         function stopTimer() {
             clearInterval(timerInterval);
-            document.getElementById("timer").style.color = "black"; // Reset color back to black on stop
+            document.getElementById("duration").style.color = "black"; // Reset color back to black on stop
             isSoundTriggered = false;
             if (oscillator) {
                 oscillator.stop();
@@ -198,7 +245,6 @@
 
         function updateToggleSoundButtonLabel() {
             const toggleSoundButton = document.getElementById("toggleSoundButton");
-            //toggleSoundButton.innerText = isSoundOn ? 'Turn Sound Off' : 'Turn Sound On';
             toggleSoundButton.classList.toggle('off', !isSoundOn);
         }
 
@@ -216,7 +262,7 @@
 
         // Event listener to handle fullscreen mode changes
         document.addEventListener("fullscreenchange", function () {
-            const timerElement = document.getElementById("timer");
+            const timerElement = document.getElementById("duration");
             if (document.fullscreenElement) {
                 timerElement.classList.add("fullscreen"); // Apply fullscreen style
             } else {
