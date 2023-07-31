@@ -154,7 +154,6 @@
             let minutes = parseInt(text.substring(length - 4, length - 2));
             let hours = parseInt(text.substring(0, length - 4));
 
-            console.log(hours + " " + minutes + " " + seconds);
             return 60 * 60 * hours + 60 * minutes + seconds;
         }
 
@@ -172,7 +171,6 @@
             isSoundTriggered = false; // Reset isSoundTriggered to false
 
             timerInterval = setInterval(function () {
-                console.log('currentTime is ' + currentTime);
                 currentTime--;
 
                 document.getElementById("duration").value = formatTime(currentTime);
